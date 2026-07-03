@@ -75,6 +75,29 @@ services:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgres://ibokki:${POSTGRES_PASSWORD}@db:5432/ibokki
 
+  game:
+    image: ghcr.io/moviedatascience/ibokki-game:latest
+    restart: unless-stopped
+    volumes:
+      - ibokki_game_data:/app/data
+    environment:
+      - IBOKKI_BASE_URL=https://ibokki.com
+      - IBOKKI_PUBLIC_PATH=/play/
+      - IBOKKI_SECURE_COOKIES=1
+      - IBOKKI_DB=/app/data/ibokki.db
+      # SSO against this site's OIDC provider (django-oauth-toolkit app;
+      # see the game repo's deploy/site-integration/README.md).
+      - IBOKKI_OIDC_ISSUER=https://ibokki.com/o
+      - IBOKKI_OIDC_CLIENT_ID=${IBOKKI_OIDC_CLIENT_ID}
+      - IBOKKI_OIDC_CLIENT_SECRET=${IBOKKI_OIDC_CLIENT_SECRET}
+      - IBOKKI_OIDC_REDIRECT_URI=https://ibokki.com/play/api/auth/oidc/callback
+    # No host port: only reachable via nginx on the internal network.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7788/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   nginx:
     image: nginx:alpine
     volumes:
@@ -87,6 +110,7 @@ services:
     depends_on:
       - web
       - websocket
+      - game
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -102,3 +126,4 @@ volumes:
   redis_data:
   static_volume:
   media_volume:
+  ibokki_game_data:

@@ -19,6 +19,8 @@ git pull --ff-only
 
 echo "==> [2/6] Building images"
 $COMPOSE build
+# The game ships as a prebuilt image from the ibokki (game) repo's CI.
+$COMPOSE pull game
 
 echo "==> [3/6] Ensuring database and redis are up"
 $COMPOSE up -d db redis
